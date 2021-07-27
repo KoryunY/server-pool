@@ -17,9 +17,9 @@ public class Spin extends Thread {
     public void run() {
         ServerPool post = new ServerPool();
         post.setAllocatedSize(request.getSize());
-        post.getServerRequests().add(request);
+        post.getServers().add(request);
         try {
-            sleep(10000);
+            sleep(100);
         } catch (InterruptedException e) {
             e.printStackTrace();
         }

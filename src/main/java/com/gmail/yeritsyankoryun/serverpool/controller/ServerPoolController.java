@@ -30,7 +30,7 @@ public class ServerPoolController {
     }
 
     @DeleteMapping(path = "delete")
-    public void clearPool() {
-        service.deleteAll();
+    public void clearPool(@RequestParam(name = "id", required = false) Integer id, @RequestParam(name = "hostname", required = false) String hostname) {
+        service.delete(hostname, id);
     }
 }

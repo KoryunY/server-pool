@@ -4,25 +4,26 @@ import org.springframework.beans.factory.annotation.Autowired;
 
 import javax.persistence.*;
 import javax.validation.constraints.Max;
-import java.util.ArrayList;
-import java.util.List;
+
+import java.util.HashSet;
+import java.util.Set;
 
 @Entity
 public class ServerPool {
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)
-    private long serverId;
+    private int serverId;
     @Max(100)
     private int allocatedSize;
     @ElementCollection
-    private final List<Server> servers = new ArrayList<>();
+    private Set<Server> servers = new HashSet<>();
     boolean isActive = false;
 
     @Autowired
     public ServerPool() {
     }
 
-    public long getServerId() {
+    public int getServerId() {
         return serverId;
     }
 
@@ -34,8 +35,16 @@ public class ServerPool {
         this.allocatedSize = allocatedSize;
     }
 
-    public List<Server> getServerRequests() {
+    public void setServerId(int serverId) {
+        this.serverId = serverId;
+    }
+
+    public Set<Server> getServers() {
         return servers;
+    }
+
+    public void setServers(Set<Server> servers) {
+        this.servers = servers;
     }
 
     public boolean isActive() {

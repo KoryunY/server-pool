@@ -7,6 +7,7 @@ import javax.validation.constraints.Max;
 import javax.validation.constraints.Min;
 import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.NotNull;
+import java.util.Objects;
 
 @Embeddable
 public class Server {
@@ -47,4 +48,16 @@ public class Server {
         this.hostName = hostName;
     }
 
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        Server server = (Server) o;
+        return hostName.equals(server.hostName);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(hostName);
+    }
 }

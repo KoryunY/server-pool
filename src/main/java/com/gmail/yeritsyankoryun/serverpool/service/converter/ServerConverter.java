@@ -7,11 +7,11 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 @Component
-public class RequestConverter {
+public class ServerConverter {
     @Autowired
     private ModelMapper modelMapper;
 
-    public Server convertToRequest(ServerDto serverDto) {
+    public Server convertToServer(ServerDto serverDto) {
         return modelMapper.map(serverDto, Server.class);
     }
 }
