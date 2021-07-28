@@ -1,13 +1,19 @@
 package com.gmail.yeritsyankoryun.serverpool.service;
 
-import com.gmail.yeritsyankoryun.serverpool.dto.ServerDto;
-import com.gmail.yeritsyankoryun.serverpool.model.ServerPool;
-import com.gmail.yeritsyankoryun.serverpool.model.Server;
-import com.gmail.yeritsyankoryun.serverpool.repository.Cloud;
-import com.gmail.yeritsyankoryun.serverpool.service.converter.ServerConverter;
+import com.gmail.yeritsyankoryun.serverpool.dto.ApplicationDto;
+import com.gmail.yeritsyankoryun.serverpool.model.ApplicationId;
+import com.gmail.yeritsyankoryun.serverpool.model.ApplicationModel;
+import com.gmail.yeritsyankoryun.serverpool.model.ServerModel;
+import com.gmail.yeritsyankoryun.serverpool.repository.ApplicationRepository;
+import com.gmail.yeritsyankoryun.serverpool.repository.ServerRepository;
+import com.gmail.yeritsyankoryun.serverpool.service.converter.ApplicationConverter;
 import com.gmail.yeritsyankoryun.serverpool.thread.Spin;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
+import org.springframework.web.bind.annotation.ControllerAdvice;
 
 import java.util.List;
 import java.util.Optional;
@@ -15,51 +21,77 @@ import java.util.Set;
 
 @Service
 public class ResourceManagementService {
-    private final Cloud cloud;
-    private final ServerConverter converter;
+    private final ServerRepository serverRepository;
+    private final ApplicationRepository applicationRepository;
+    private final ApplicationConverter converter;
 
     @Autowired
-    public ResourceManagementService(Cloud cloud, ServerConverter converter) {
-        this.cloud = cloud;
+    public ResourceManagementService(ServerRepository serverRepository, ApplicationRepository applicationRepository, ApplicationConverter converter) {
+        this.serverRepository = serverRepository;
+        this.applicationRepository = applicationRepository;
         this.converter = converter;
     }
 
-    public List<ServerPool> getAllServers() {
-        return cloud.findAll();
+    public List<ServerModel> getAllServers() {
+        return serverRepository.findAll();
     }
 
-    public synchronized void addServer(ServerDto serverDto) {
-        Server server = converter.convertToServer(serverDto);
-        if (cloud.findAll().stream().anyMatch(serverPool -> 100 - serverPool.getAllocatedSize() >= serverDto.getSize() && serverPool.isActive())) {
-            ServerPool pool = cloud.findAll().stream()
-                    .filter(serverPool -> 100 - serverPool.getAllocatedSize() >= serverDto.getSize()).findFirst().get();
-            if (pool.getServers().add(server))
-                pool.setAllocatedSize(pool.getAllocatedSize() + server.getSize());
-            else
-                throw new IllegalArgumentException("ERROR:Server with hostname:" + server.getHostName() + " already exist!");
-            cloud.save(pool);
+    public List<ApplicationModel> getAllApplications() {
+        return applicationRepository.findAll();
+    }
+
+    public void addServer(ApplicationDto applicationDto) {
+        ApplicationModel applicationModel = converter.convertToApplication(applicationDto);
+        if (serverRepository.findAll().stream()
+                .anyMatch(serverModel -> 100 - serverModel.getAllocatedSize() >= applicationModel.getSize()
+                        && serverModel.isActive())) {
+            ServerModel server = serverRepository.findAll().stream()
+                    .filter(serverModel -> 100 - serverModel.getAllocatedSize() >= applicationModel.getSize()).findFirst().get();
+            applicationModel.setServerId(server.getServerId());
+            if (server.getApplicationModels().add(applicationModel)) {
+                server.setAllocatedSize(server.getAllocatedSize() + applicationModel.getSize());
+                applicationRepository.save(applicationModel);
+            } else spinNewOne(applicationModel);
         } else {
-            Spin thread = new Spin(server, cloud);
-            thread.run();
+            spinNewOne(applicationModel);
         }
     }
 
-    public void delete(String hostname, Integer id) {
-        if (hostname == null && id == null)
-            cloud.deleteAll();
-        else if (hostname == null)
-            cloud.deleteById(id);
-        else if (id == null) {
-            for (ServerPool serverPool : cloud.findAll()) {
-                Set<Server> servers = serverPool.getServers();
-                Optional<Server> serv = servers.stream().filter(server -> server.getHostName().equals(hostname)).findFirst();
-                if (serv.isPresent()) {
-                    serverPool.setAllocatedSize(serverPool.getAllocatedSize() - serv.get().getSize());
-                    servers.remove(serv.get());
-                    serverPool.setServers(servers);
-                    cloud.save(serverPool);
-                }
+    public synchronized void spinNewOne(ApplicationModel applicationModel) {
+        Spin thread = new Spin(applicationModel, serverRepository, applicationRepository);
+        thread.run();
+    }
+
+    public ServerModel getServerById(int id) {
+        return serverRepository.getById(id);
+    }
+
+    public ApplicationModel getApplicationById(int id, String name) {
+        return applicationRepository.getById(new ApplicationId(name, id));
+    }
+
+    public void deleteServer(Integer id) {
+        if (id == null)
+            serverRepository.deleteAll();
+        else
+            serverRepository.deleteById(id);
+    }
+
+    public void deleteApp(Integer id, String name) {
+        if (id == null && name == null) {
+            for (ServerModel serverModel : serverRepository.findAll()) {
+                serverModel.getApplicationModels().clear();
+                serverModel.setAllocatedSize(0);
+                serverRepository.save(serverModel);
             }
+        } else if (id == null || name == null)
+            throw new IllegalArgumentException("Cant access Application " + (id == null ? "Id" : "Name") + " field");
+        else {
+            ServerModel server = serverRepository.getById(id);
+            ApplicationModel application = applicationRepository.getById(new ApplicationId(name, id));
+            server.setAllocatedSize(server.getAllocatedSize() - application.getSize());
+            server.getApplicationModels().remove(application);
+            serverRepository.save(server);
         }
     }
 }

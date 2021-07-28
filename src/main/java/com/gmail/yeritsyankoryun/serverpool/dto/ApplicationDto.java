@@ -8,7 +8,7 @@ import javax.validation.constraints.Min;
 import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.NotNull;
 
-public class ServerDto {
+public class ApplicationDto {
     @NotNull
     @Min(1)
     @Max(100)
@@ -16,10 +16,10 @@ public class ServerDto {
     @NotNull
     private Db_Type type;
     @NotBlank
-    private String hostName;
+    private String name;
 
     @Autowired
-    public ServerDto() {
+    public ApplicationDto() {
     }
 
     public int getSize() {
@@ -38,11 +38,11 @@ public class ServerDto {
         this.type = type;
     }
 
-    public String getHostName() {
-        return hostName;
+    public String getName() {
+        return name;
     }
 
-    public void setHostName(String hostName) {
-        this.hostName = hostName;
+    public void setName(String name) {
+        this.name = name;
     }
 }

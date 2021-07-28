@@ -1,29 +1,35 @@
 package com.gmail.yeritsyankoryun.serverpool.thread;
 
-import com.gmail.yeritsyankoryun.serverpool.model.ServerPool;
-import com.gmail.yeritsyankoryun.serverpool.model.Server;
-import com.gmail.yeritsyankoryun.serverpool.repository.Cloud;
+import com.gmail.yeritsyankoryun.serverpool.model.ServerModel;
+import com.gmail.yeritsyankoryun.serverpool.model.ApplicationModel;
+import com.gmail.yeritsyankoryun.serverpool.repository.ApplicationRepository;
+import com.gmail.yeritsyankoryun.serverpool.repository.ServerRepository;
 
 public class Spin extends Thread {
-    private Server request;
-    private Cloud pool;
+    private ApplicationModel applicationModel;
+    private ServerRepository serverRepository;
+    private ApplicationRepository applicationRepository;
 
-    public Spin(Server request, Cloud pool) {
-        this.request = request;
-        this.pool = pool;
+    public Spin(ApplicationModel applicationModel, ServerRepository serverRepository, ApplicationRepository applicationRepository) {
+        this.applicationModel = applicationModel;
+        this.serverRepository = serverRepository;
+        this.applicationRepository = applicationRepository;
     }
 
     @Override
     public void run() {
-        ServerPool post = new ServerPool();
-        post.setAllocatedSize(request.getSize());
-        post.getServers().add(request);
+        ServerModel serverModel = new ServerModel();
+        serverRepository.save(serverModel);
+        serverModel.setAllocatedSize(applicationModel.getSize());
+        applicationModel.setServerId(serverModel.getServerId());
+        serverModel.getApplicationModels().add(applicationModel);
         try {
-            sleep(100);
+            sleep(7000);
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
-        post.setActive(true);
-        pool.save(post);
+        serverModel.setActive(true);
+        applicationRepository.save(applicationModel);
+        serverRepository.save(serverModel);
     }
 }

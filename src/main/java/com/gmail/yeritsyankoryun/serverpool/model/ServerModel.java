@@ -9,18 +9,19 @@ import java.util.HashSet;
 import java.util.Set;
 
 @Entity
-public class ServerPool {
+public class ServerModel {
     @Id
-    @GeneratedValue(strategy = GenerationType.AUTO)
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private int serverId;
     @Max(100)
     private int allocatedSize;
     @ElementCollection
-    private Set<Server> servers = new HashSet<>();
+    @OneToMany
+    private Set<ApplicationModel> applicationModels = new HashSet<>();
     boolean isActive = false;
 
     @Autowired
-    public ServerPool() {
+    public ServerModel() {
     }
 
     public int getServerId() {
@@ -35,16 +36,12 @@ public class ServerPool {
         this.allocatedSize = allocatedSize;
     }
 
-    public void setServerId(int serverId) {
-        this.serverId = serverId;
+    public Set<ApplicationModel> getApplicationModels() {
+        return applicationModels;
     }
 
-    public Set<Server> getServers() {
-        return servers;
-    }
-
-    public void setServers(Set<Server> servers) {
-        this.servers = servers;
+    public void setApplicationModels(Set<ApplicationModel> applicationModels) {
+        this.applicationModels = applicationModels;
     }
 
     public boolean isActive() {
