@@ -30,12 +30,12 @@ public class ServerController {
     }
 
     @PostMapping(path = "create")
-    public void addToPool(@Valid @RequestBody ApplicationDto applicationDto) {
+    public void addToServer(@Valid @RequestBody ApplicationDto applicationDto) {
         service.addServer(applicationDto);
     }
 
     @DeleteMapping(path = "delete")
-    public void clearPool(@RequestParam(name = "id", required = false) Integer id) {
+    public void clearServers(@RequestParam(name = "id", required = false) Integer id) {
         service.deleteServer(id);
     }
 }
