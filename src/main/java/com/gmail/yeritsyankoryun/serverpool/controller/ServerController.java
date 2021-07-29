@@ -29,11 +29,6 @@ public class ServerController {
         return service.getServerById(id);
     }
 
-    @PostMapping(path = "create")
-    public void addToServer(@Valid @RequestBody ApplicationDto applicationDto) {
-        service.addServer(applicationDto);
-    }
-
     @DeleteMapping(path = "delete")
     public void clearServers(@RequestParam(name = "id", required = false) Integer id) {
         service.deleteServer(id);

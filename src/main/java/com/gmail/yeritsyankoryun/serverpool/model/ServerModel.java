@@ -4,6 +4,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 
 import javax.persistence.*;
 import javax.validation.constraints.Max;
+import javax.validation.constraints.NotNull;
 
 import java.util.HashSet;
 import java.util.Set;
@@ -15,10 +16,13 @@ public class ServerModel {
     private int serverId;
     @Max(100)
     private int allocatedSize;
+    @NotNull
+    private Db_Type storingDbType;
     @ElementCollection
     @OneToMany
     private Set<ApplicationModel> applicationModels = new HashSet<>();
-    boolean isActive = false;
+    private static boolean isActive = false;
+
 
     @Autowired
     public ServerModel() {
@@ -36,6 +40,14 @@ public class ServerModel {
         this.allocatedSize = allocatedSize;
     }
 
+    public Db_Type getStoringDbType() {
+        return storingDbType;
+    }
+
+    public void setStoringDbType(Db_Type storingDbType) {
+        this.storingDbType = storingDbType;
+    }
+
     public Set<ApplicationModel> getApplicationModels() {
         return applicationModels;
     }
@@ -51,4 +63,5 @@ public class ServerModel {
     public void setActive(boolean active) {
         isActive = active;
     }
+
 }

@@ -19,17 +19,20 @@ public class Spin extends Thread {
     @Override
     public void run() {
         ServerModel serverModel = new ServerModel();
-        serverRepository.save(serverModel);
         serverModel.setAllocatedSize(applicationModel.getSize());
+        serverModel.setStoringDbType(applicationModel.getType());
+        serverRepository.save(serverModel);
         applicationModel.setServerId(serverModel.getServerId());
         serverModel.getApplicationModels().add(applicationModel);
-        try {
-            sleep(7000);
-        } catch (InterruptedException e) {
-            e.printStackTrace();
+        synchronized (serverRepository) {
+            try {
+                sleep(7000);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+            serverModel.setActive(true);
+            applicationRepository.save(applicationModel);
+            serverRepository.save(serverModel);
         }
-        serverModel.setActive(true);
-        applicationRepository.save(applicationModel);
-        serverRepository.save(serverModel);
     }
 }

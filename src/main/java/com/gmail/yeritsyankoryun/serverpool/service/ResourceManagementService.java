@@ -9,15 +9,10 @@ import com.gmail.yeritsyankoryun.serverpool.repository.ServerRepository;
 import com.gmail.yeritsyankoryun.serverpool.service.converter.ApplicationConverter;
 import com.gmail.yeritsyankoryun.serverpool.thread.Spin;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
-import org.springframework.web.bind.annotation.ControllerAdvice;
 
 import java.util.List;
-import java.util.Optional;
-import java.util.Set;
 
 @Service
 public class ResourceManagementService {
@@ -40,13 +35,20 @@ public class ResourceManagementService {
         return applicationRepository.findAll();
     }
 
-    public void addServer(ApplicationDto applicationDto) {
+    public ResponseEntity<String> addApplication(ApplicationDto applicationDto) {
         ApplicationModel applicationModel = converter.convertToApplication(applicationDto);
-        if (serverRepository.findAll().stream()
-                .anyMatch(serverModel -> 100 - serverModel.getAllocatedSize() >= applicationModel.getSize()
-                        && serverModel.isActive())) {
-            ServerModel server = serverRepository.findAll().stream()
-                    .filter(serverModel -> 100 - serverModel.getAllocatedSize() >= applicationModel.getSize()).findFirst().get();
+        ServerModel server = serverRepository.findAll().stream()
+                .filter(serverModel -> 100 - serverModel.getAllocatedSize() >= applicationModel.getSize()).findFirst().orElse(null);
+        if (server != null && server.getStoringDbType() == applicationDto.getType()) {
+            synchronized (serverRepository) {
+                while (!server.isActive()) {
+                    try {
+                        wait();
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+                }
+            }
             applicationModel.setServerId(server.getServerId());
             if (server.getApplicationModels().add(applicationModel)) {
                 server.setAllocatedSize(server.getAllocatedSize() + applicationModel.getSize());
@@ -54,12 +56,15 @@ public class ResourceManagementService {
             } else spinNewOne(applicationModel);
         } else {
             spinNewOne(applicationModel);
+            return ResponseEntity.status(200).body("Spinning new Server For " + applicationModel.getName());
         }
+        return ResponseEntity.status(200).body("Allocated " + applicationModel.getName() + " On Server ID:" + applicationModel.getServerId());
     }
 
-    public synchronized void spinNewOne(ApplicationModel applicationModel) {
+
+    public void spinNewOne(ApplicationModel applicationModel) {
         Spin thread = new Spin(applicationModel, serverRepository, applicationRepository);
-        thread.run();
+        thread.start();
     }
 
     public ServerModel getServerById(int id) {
@@ -78,20 +83,10 @@ public class ResourceManagementService {
     }
 
     public void deleteApp(Integer id, String name) {
-        if (id == null && name == null) {
-            for (ServerModel serverModel : serverRepository.findAll()) {
-                serverModel.getApplicationModels().clear();
-                serverModel.setAllocatedSize(0);
-                serverRepository.save(serverModel);
-            }
-        } else if (id == null || name == null)
-            throw new IllegalArgumentException("Cant access Application " + (id == null ? "Id" : "Name") + " field");
-        else {
-            ServerModel server = serverRepository.getById(id);
-            ApplicationModel application = applicationRepository.getById(new ApplicationId(name, id));
-            server.setAllocatedSize(server.getAllocatedSize() - application.getSize());
-            server.getApplicationModels().remove(application);
-            serverRepository.save(server);
-        }
+        ServerModel server = serverRepository.getById(id);
+        ApplicationModel application = applicationRepository.getById(new ApplicationId(name, id));
+        server.setAllocatedSize(server.getAllocatedSize() - application.getSize());
+        server.getApplicationModels().remove(application);
+        serverRepository.save(server);
     }
 }

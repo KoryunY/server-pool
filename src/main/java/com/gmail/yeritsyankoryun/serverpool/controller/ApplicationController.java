@@ -1,10 +1,13 @@
 package com.gmail.yeritsyankoryun.serverpool.controller;
 
+import com.gmail.yeritsyankoryun.serverpool.dto.ApplicationDto;
 import com.gmail.yeritsyankoryun.serverpool.model.ApplicationModel;
 import com.gmail.yeritsyankoryun.serverpool.service.ResourceManagementService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import javax.validation.Valid;
 import java.util.List;
 
 @RestController
@@ -27,9 +30,14 @@ public class ApplicationController {
         return service.getApplicationById(id, name);
     }
 
+    @PostMapping(path = "create")
+    public ResponseEntity<String> addToServer(@Valid @RequestBody ApplicationDto applicationDto){
+        return service.addApplication(applicationDto);
+    }
+
     @DeleteMapping(path = "delete")
-    public void clearPool(@RequestParam(name = "name", required = false) String name,
-                          @RequestParam(name = "id", required = false) Integer id) {
+    public void deleteApplication(@RequestParam(name = "name") String name,
+                          @RequestParam(name = "id") Integer id) {
         service.deleteApp(id, name);
     }
 }
