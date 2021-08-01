@@ -13,13 +13,17 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 
 @Service
 public class ResourceManagementService {
     private final ServerRepository serverRepository;
     private final ApplicationRepository applicationRepository;
     private final ApplicationConverter converter;
-
+    private final ExecutorService threadpool = Executors.newCachedThreadPool();
+    private Future<ApplicationModel> futureTask;
     @Autowired
     public ResourceManagementService(ServerRepository serverRepository, ApplicationRepository applicationRepository, ApplicationConverter converter) {
         this.serverRepository = serverRepository;
@@ -41,17 +45,19 @@ public class ResourceManagementService {
                 .filter(serverModel -> 100 - serverModel.getAllocatedSize() >= applicationModel.getSize()).findFirst().orElse(null);
         if (server != null && server.getStoringDbType() == applicationDto.getType()) {
             if (!server.isActive()) {
-                waitToActivate();
+                while (!futureTask.isDone()){
+                    //do Nothing
+                }
             }
             addToServer(applicationModel, server);
         } else {
-            createServer(applicationModel);
+            futureTask = threadpool.submit(() -> createServer(applicationModel));
             return ResponseEntity.status(200).body("Spinning new Server For " + applicationModel.getName());
         }
         return ResponseEntity.status(200).body("Allocated " + applicationModel.getName() + " On Server ID:" + applicationModel.getServerId());
     }
 
-    public void createServer(ApplicationModel applicationModel) {
+    public ApplicationModel createServer(ApplicationModel applicationModel) {
         ServerModel serverModel = new ServerModel();
         serverModel.setAllocatedSize(applicationModel.getSize());
         serverModel.setStoringDbType(applicationModel.getType());
@@ -62,9 +68,7 @@ public class ResourceManagementService {
         applicationRepository.save(applicationModel);
         serverModel.setActive(true);
         serverRepository.save(serverModel);
-        synchronized (serverRepository) {
-            serverRepository.notifyAll();
-        }
+        return applicationModel;
     }
 
     public void addToServer(ApplicationModel applicationModel, ServerModel serverModel) {
