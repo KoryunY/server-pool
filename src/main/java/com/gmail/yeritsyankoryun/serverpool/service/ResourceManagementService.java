@@ -40,31 +40,61 @@ public class ResourceManagementService {
         ServerModel server = serverRepository.findAll().stream()
                 .filter(serverModel -> 100 - serverModel.getAllocatedSize() >= applicationModel.getSize()).findFirst().orElse(null);
         if (server != null && server.getStoringDbType() == applicationDto.getType()) {
-            synchronized (serverRepository) {
-                while (!server.isActive()) {
-                    try {
-                        wait();
-                    } catch (InterruptedException e) {
-                        e.printStackTrace();
-                    }
-                }
+            if (!server.isActive()) {
+                waitToActivate();
             }
-            applicationModel.setServerId(server.getServerId());
-            if (server.getApplicationModels().add(applicationModel)) {
-                server.setAllocatedSize(server.getAllocatedSize() + applicationModel.getSize());
-                applicationRepository.save(applicationModel);
-            } else spinNewOne(applicationModel);
+            addToServer(applicationModel, server);
         } else {
-            spinNewOne(applicationModel);
+            createServer(applicationModel);
             return ResponseEntity.status(200).body("Spinning new Server For " + applicationModel.getName());
         }
         return ResponseEntity.status(200).body("Allocated " + applicationModel.getName() + " On Server ID:" + applicationModel.getServerId());
     }
 
+    public void createServer(ApplicationModel applicationModel) {
+        ServerModel serverModel = new ServerModel();
+        serverModel.setAllocatedSize(applicationModel.getSize());
+        serverModel.setStoringDbType(applicationModel.getType());
+        serverRepository.save(serverModel);
+        applicationModel.setServerId(serverModel.getServerId());
+        serverModel.getApplicationModels().add(applicationModel);
+        spinNewOne();
+        applicationRepository.save(applicationModel);
+        serverModel.setActive(true);
+        serverRepository.save(serverModel);
+        synchronized (serverRepository) {
+            serverRepository.notifyAll();
+        }
+    }
 
-    public void spinNewOne(ApplicationModel applicationModel) {
-        Spin thread = new Spin(applicationModel, serverRepository, applicationRepository);
+    public void addToServer(ApplicationModel applicationModel, ServerModel serverModel) {
+        applicationModel.setServerId(serverModel.getServerId());
+        if (serverModel.getApplicationModels().add(applicationModel)) {
+            serverModel.setAllocatedSize(serverModel.getAllocatedSize() + applicationModel.getSize());
+            serverModel.setActive(true);
+            applicationRepository.save(applicationModel);
+        } else createServer(applicationModel);
+    }
+
+    public void waitToActivate() {
+        synchronized (serverRepository) {
+            try {
+                serverRepository.wait();
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
+    public void spinNewOne() {
+        Spin spinning = new Spin();
+        Thread thread = new Thread(spinning);
         thread.start();
+        try {
+            thread.join();
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
     }
 
     public ServerModel getServerById(int id) {

@@ -21,7 +21,7 @@ public class ServerModel {
     @ElementCollection
     @OneToMany
     private Set<ApplicationModel> applicationModels = new HashSet<>();
-    private static boolean isActive = false;
+    private boolean isActive;
 
 
     @Autowired
