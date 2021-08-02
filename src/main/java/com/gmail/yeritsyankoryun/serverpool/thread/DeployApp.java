@@ -5,9 +5,10 @@ import com.gmail.yeritsyankoryun.serverpool.model.ServerModel;
 import com.gmail.yeritsyankoryun.serverpool.repository.ApplicationRepository;
 import com.gmail.yeritsyankoryun.serverpool.repository.ServerRepository;
 
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
+import java.util.stream.Collectors;
 
 public class DeployApp implements Runnable {
     private final ApplicationRepository applicationRepository;
@@ -33,11 +34,14 @@ public class DeployApp implements Runnable {
             waiter.start();
             try {
                 waiter.join();
-                serverModel = spinningServers.get(serverModel.getServerId()).get();
-            } catch (InterruptedException| ExecutionException e) {
+                serverModel = serverRepository.findById(serverModel.getServerId()).get();
+                Set<ApplicationModel> applicationModels = applicationRepository.findAll().stream()
+                        .filter(applicationModel1 -> applicationModel1.getServerId() == serverModel.getServerId())
+                        .collect(Collectors.toSet());
+                serverModel.setApplicationModels(applicationModels);
+            } catch (InterruptedException e) {
                 e.printStackTrace();
             }
-            spinningServers.remove(serverModel.getServerId());
         }
 
         applicationModel.setServerId(serverModel.getServerId());
