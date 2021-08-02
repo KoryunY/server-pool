@@ -4,10 +4,11 @@ import static java.lang.Thread.sleep;
 
 public class Spin implements Runnable{
 
+
     @Override
     public void run() {
         try {
-            sleep(20000);
+            sleep(5000);
         } catch (InterruptedException e) {
             e.printStackTrace();
         }

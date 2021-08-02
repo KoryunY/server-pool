@@ -3,6 +3,7 @@ package com.gmail.yeritsyankoryun.serverpool.controller;
 import com.gmail.yeritsyankoryun.serverpool.dto.ApplicationDto;
 import com.gmail.yeritsyankoryun.serverpool.model.ApplicationModel;
 import com.gmail.yeritsyankoryun.serverpool.service.ResourceManagementService;
+import com.gmail.yeritsyankoryun.serverpool.service.response.DeployResponse;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -31,7 +32,7 @@ public class ApplicationController {
     }
 
     @PostMapping(path = "create")
-    public ResponseEntity<String> addToServer(@Valid @RequestBody ApplicationDto applicationDto){
+    public DeployResponse addToServer(@Valid @RequestBody ApplicationDto applicationDto){
         return service.addApplication(applicationDto);
     }
 
