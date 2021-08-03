@@ -8,7 +8,7 @@ public class Spin implements Runnable{
     @Override
     public void run() {
         try {
-            sleep(5000);
+            sleep(20000);
         } catch (InterruptedException e) {
             e.printStackTrace();
         }

@@ -10,11 +10,11 @@ import com.gmail.yeritsyankoryun.serverpool.service.converter.ApplicationConvert
 import com.gmail.yeritsyankoryun.serverpool.service.response.DeployResponse;
 import com.gmail.yeritsyankoryun.serverpool.thread.DeployApp;
 import com.gmail.yeritsyankoryun.serverpool.thread.DeployServer;
-import com.gmail.yeritsyankoryun.serverpool.thread.Wait;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Future;
 
@@ -45,13 +45,12 @@ public class ResourceManagementService {
         ServerModel serverModel = serverRepository.findAll().stream()
                 .filter(server -> 100 - server.getAllocatedSize() >= applicationModel.getSize()).findFirst().orElse(null);
         if (serverModel != null && serverModel.getStoringDbType() == applicationDto.getType()) {
-            if (!serverModel.isActive()) {
-                new Thread(new DeployApp(applicationRepository, applicationModel,
-                        serverModel, serverRepository, spinningServers)).start();
-                return DeployResponse.scheduled(applicationModel);
-            }
+            applicationModel.setServerId(serverModel.getServerId());
             new Thread(new DeployApp(applicationRepository, applicationModel,
                     serverModel, serverRepository, spinningServers)).start();
+            if (!serverModel.isActive()) {
+                return DeployResponse.scheduled(applicationModel);
+            }
             return DeployResponse.deployed(applicationModel);
         }
         new Thread(new DeployServer(serverRepository,applicationRepository,applicationModel,spinningServers)).start();
