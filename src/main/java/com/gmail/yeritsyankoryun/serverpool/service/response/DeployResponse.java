@@ -23,7 +23,7 @@ public class DeployResponse {
 
     public static DeployResponse spinning(ApplicationModel app) {
         DeployResponse response = new DeployResponse();
-        response.message = "Spinning a new Server for application:" + app.getName() + " on server id:" + app.getServerId();
+        response.message = "Spinning a new Server for application:" + app.getName();
         return response;
     }
 }
