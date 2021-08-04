@@ -14,8 +14,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.Future;
+import java.util.concurrent.*;
 import java.util.stream.Collectors;
 
 @Service
@@ -23,7 +22,9 @@ public class ResourceManagementService {
     private final ServerRepository serverRepository;
     private final ApplicationRepository applicationRepository;
     private final ApplicationConverter converter;
-    private final ConcurrentHashMap<Integer, Future<ServerModel>> spinningServers = new ConcurrentHashMap<>();
+    private final static ConcurrentHashMap<Integer, Future<ServerModel>> spinningServers = new ConcurrentHashMap<>();
+    private final ExecutorService executor = Executors.newCachedThreadPool();
+
 
     @Autowired
     public ResourceManagementService(ServerRepository serverRepository, ApplicationRepository applicationRepository, ApplicationConverter converter) {
@@ -42,20 +43,43 @@ public class ResourceManagementService {
 
     public DeployResponse addApplication(ApplicationDto applicationDto) {
         ApplicationModel applicationModel = converter.convertToApplication(applicationDto);
-        ServerModel serverModel = serverRepository.findAll().stream()
+        List<ServerModel> serverModels = serverRepository.findAll().stream()
                 .filter(server -> 100 - server.getAllocatedSize() >= applicationModel.getSize()
-                        && server.getStoringDbType() == applicationModel.getType()).findFirst().orElse(null);
-        if (serverModel != null) {
-                applicationModel.setServerId(serverModel.getServerId());
-                new Thread(new DeployApp(applicationRepository, applicationModel,
-                        serverModel, serverRepository, spinningServers)).start();
-                if (!serverModel.isActive()) {
-                    return DeployResponse.scheduled(applicationModel);
+                        && server.getStoringDbType() == applicationModel.getType() && !server.getApplicationModels().contains(applicationModel)).collect(Collectors.toList());
+        if (!serverModels.isEmpty()) {
+            for (ServerModel serverModel : serverModels) {
+                if (serverModel.isActive()) {
+                    applicationModel.setServerId(serverModel.getServerId());
+                    deployApp(applicationModel, serverModel);
+                    return DeployResponse.deployed(applicationModel);
                 }
-                return DeployResponse.deployed(applicationModel);
+            }
+            DeployApp deployApp = new DeployApp(applicationRepository, applicationModel, serverModels, serverRepository, spinningServers);
+            executor.submit(deployApp);
+            return DeployResponse.scheduled(applicationModel);
         }
-        new Thread(new DeployServer(serverRepository, applicationRepository, applicationModel, spinningServers)).start();
+        createServer(applicationModel);
         return DeployResponse.spinning(applicationModel);
+    }
+
+    public void createServer(ApplicationModel applicationModel) {
+        ServerModel serverModel = new ServerModel();
+        serverModel.setAllocatedSize(applicationModel.getSize());
+        serverModel.setStoringDbType(applicationModel.getType());
+        serverRepository.save(serverModel);
+        applicationModel.setServerId(serverModel.getServerId());
+        serverModel.getApplicationModels().add(applicationModel);
+        applicationRepository.save(applicationModel);
+        DeployServer deployServer = new DeployServer(serverModel, serverRepository);
+        spinningServers.put(serverModel.getServerId(), executor.submit(deployServer));
+    }
+
+    public void deployApp(ApplicationModel applicationModel, ServerModel serverModel) {
+        applicationModel.setServerId(serverModel.getServerId());
+        serverModel.getApplicationModels().add(applicationModel);
+        serverModel.setAllocatedSize(serverModel.getAllocatedSize() + applicationModel.getSize());
+        applicationRepository.save(applicationModel);
+        serverRepository.save(serverModel);
     }
 
 
@@ -73,7 +97,6 @@ public class ResourceManagementService {
         else
             serverRepository.deleteById(id);
     }
-
     public void deleteApp(Integer id, String name) {
         ServerModel server = serverRepository.getById(id);
         ApplicationModel application = applicationRepository.getById(new ApplicationId(name, id));
