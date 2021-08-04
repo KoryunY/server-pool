@@ -14,9 +14,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
-import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Future;
+import java.util.stream.Collectors;
 
 @Service
 public class ResourceManagementService {
@@ -42,16 +42,20 @@ public class ResourceManagementService {
 
     public DeployResponse addApplication(ApplicationDto applicationDto) {
         ApplicationModel applicationModel = converter.convertToApplication(applicationDto);
-        ServerModel serverModel = serverRepository.findAll().stream()
-                .filter(server -> 100 - server.getAllocatedSize() >= applicationModel.getSize()).findFirst().orElse(null);
-        if (serverModel != null && serverModel.getStoringDbType() == applicationDto.getType()) {
-            applicationModel.setServerId(serverModel.getServerId());
-            new Thread(new DeployApp(applicationRepository, applicationModel,
-                    serverModel, serverRepository, spinningServers)).start();
-            if (!serverModel.isActive()) {
-                return DeployResponse.scheduled(applicationModel);
+        List<ServerModel> serverModels = serverRepository.findAll().stream()
+                .filter(server -> 100 - server.getAllocatedSize() >= applicationModel.getSize()).collect(Collectors.toList());
+        if(!serverModels.isEmpty()){
+            for(ServerModel serverModel:serverModels){
+                if(serverModel.getStoringDbType() == applicationDto.getType()){
+                    applicationModel.setServerId(serverModel.getServerId());
+                    new Thread(new DeployApp(applicationRepository, applicationModel,
+                            serverModel, serverRepository, spinningServers)).start();
+                    if (!serverModel.isActive()) {
+                        return DeployResponse.scheduled(applicationModel);
+                    }
+                    return DeployResponse.deployed(applicationModel);
+                }
             }
-            return DeployResponse.deployed(applicationModel);
         }
         new Thread(new DeployServer(serverRepository,applicationRepository,applicationModel,spinningServers)).start();
         return DeployResponse.spinning(applicationModel);
