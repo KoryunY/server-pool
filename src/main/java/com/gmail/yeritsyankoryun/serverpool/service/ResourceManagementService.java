@@ -42,22 +42,19 @@ public class ResourceManagementService {
 
     public DeployResponse addApplication(ApplicationDto applicationDto) {
         ApplicationModel applicationModel = converter.convertToApplication(applicationDto);
-        List<ServerModel> serverModels = serverRepository.findAll().stream()
-                .filter(server -> 100 - server.getAllocatedSize() >= applicationModel.getSize()).collect(Collectors.toList());
-        if(!serverModels.isEmpty()){
-            for(ServerModel serverModel:serverModels){
-                if(serverModel.getStoringDbType() == applicationDto.getType()){
-                    applicationModel.setServerId(serverModel.getServerId());
-                    new Thread(new DeployApp(applicationRepository, applicationModel,
-                            serverModel, serverRepository, spinningServers)).start();
-                    if (!serverModel.isActive()) {
-                        return DeployResponse.scheduled(applicationModel);
-                    }
-                    return DeployResponse.deployed(applicationModel);
+        ServerModel serverModel = serverRepository.findAll().stream()
+                .filter(server -> 100 - server.getAllocatedSize() >= applicationModel.getSize()
+                        && server.getStoringDbType() == applicationModel.getType()).findFirst().orElse(null);
+        if (serverModel != null) {
+                applicationModel.setServerId(serverModel.getServerId());
+                new Thread(new DeployApp(applicationRepository, applicationModel,
+                        serverModel, serverRepository, spinningServers)).start();
+                if (!serverModel.isActive()) {
+                    return DeployResponse.scheduled(applicationModel);
                 }
-            }
+                return DeployResponse.deployed(applicationModel);
         }
-        new Thread(new DeployServer(serverRepository,applicationRepository,applicationModel,spinningServers)).start();
+        new Thread(new DeployServer(serverRepository, applicationRepository, applicationModel, spinningServers)).start();
         return DeployResponse.spinning(applicationModel);
     }
 
