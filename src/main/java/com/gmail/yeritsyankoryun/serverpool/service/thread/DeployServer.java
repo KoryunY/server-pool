@@ -1,4 +1,4 @@
-package com.gmail.yeritsyankoryun.serverpool.thread;
+package com.gmail.yeritsyankoryun.serverpool.service.thread;
 
 import com.gmail.yeritsyankoryun.serverpool.model.ServerModel;
 import com.gmail.yeritsyankoryun.serverpool.repository.ServerRepository;
@@ -9,7 +9,7 @@ import static java.lang.Thread.sleep;
 
 public class DeployServer implements Callable<ServerModel> {
     private ServerModel serverModel;
-    private ServerRepository serverRepository;
+    private final ServerRepository serverRepository;
 
     public DeployServer(ServerModel serverModel, ServerRepository serverRepository) {
         this.serverModel = serverModel;
@@ -23,6 +23,8 @@ public class DeployServer implements Callable<ServerModel> {
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
+
+        serverModel = serverRepository.findById(serverModel.getServerId()).get();
         serverModel.setActive(true);
         serverRepository.save(serverModel);
         return serverModel;

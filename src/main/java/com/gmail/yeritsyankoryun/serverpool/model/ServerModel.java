@@ -1,12 +1,12 @@
 package com.gmail.yeritsyankoryun.serverpool.model;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.transaction.annotation.Transactional;
 
 import javax.persistence.*;
 import javax.validation.constraints.Max;
 import javax.validation.constraints.NotNull;
 
-import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -16,11 +16,12 @@ public class ServerModel {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private int serverId;
     @Max(100)
-    private int allocatedSize;
+    private int allocatedMemory;
+    private int reservedMemory;
     @NotNull
     private Db_Type storingDbType;
     @ElementCollection
-    @OneToMany
+    @OneToMany(fetch = FetchType.EAGER)
     private Set<ApplicationModel> applicationModels = new HashSet<>();
     private boolean isActive;
 
@@ -33,12 +34,20 @@ public class ServerModel {
         return serverId;
     }
 
-    public int getAllocatedSize() {
-        return allocatedSize;
+    public int getAllocatedMemory() {
+        return allocatedMemory;
     }
 
-    public void setAllocatedSize(int allocatedSize) {
-        this.allocatedSize = allocatedSize;
+    public void setAllocatedMemory(int allocatedMemory) {
+        this.allocatedMemory = allocatedMemory;
+    }
+
+    public int getReservedMemory() {
+        return reservedMemory;
+    }
+
+    public void setReservedMemory(int reservedMemory) {
+        this.reservedMemory = reservedMemory;
     }
 
     public Db_Type getStoringDbType() {
@@ -51,10 +60,6 @@ public class ServerModel {
 
     public Set<ApplicationModel> getApplicationModels() {
         return applicationModels;
-    }
-
-    public void setApplicationModels(Set<ApplicationModel> applicationModels) {
-        this.applicationModels = applicationModels;
     }
 
     public boolean isActive() {

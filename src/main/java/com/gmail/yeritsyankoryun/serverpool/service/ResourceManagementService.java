@@ -8,8 +8,8 @@ import com.gmail.yeritsyankoryun.serverpool.repository.ApplicationRepository;
 import com.gmail.yeritsyankoryun.serverpool.repository.ServerRepository;
 import com.gmail.yeritsyankoryun.serverpool.service.converter.ApplicationConverter;
 import com.gmail.yeritsyankoryun.serverpool.service.response.DeployResponse;
-import com.gmail.yeritsyankoryun.serverpool.thread.DeployApp;
-import com.gmail.yeritsyankoryun.serverpool.thread.DeployServer;
+import com.gmail.yeritsyankoryun.serverpool.service.thread.DeployApp;
+import com.gmail.yeritsyankoryun.serverpool.service.thread.DeployServer;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -22,9 +22,9 @@ public class ResourceManagementService {
     private final ServerRepository serverRepository;
     private final ApplicationRepository applicationRepository;
     private final ApplicationConverter converter;
-    private final static ConcurrentHashMap<Integer, Future<ServerModel>> spinningServers = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<Integer, Future<ServerModel>> spinningServers = new ConcurrentHashMap<>();
     private final ExecutorService executor = Executors.newCachedThreadPool();
-
+    public final static Object lock = new Object();
 
     @Autowired
     public ResourceManagementService(ServerRepository serverRepository, ApplicationRepository applicationRepository, ApplicationConverter converter) {
@@ -44,8 +44,9 @@ public class ResourceManagementService {
     public DeployResponse addApplication(ApplicationDto applicationDto) {
         ApplicationModel applicationModel = converter.convertToApplication(applicationDto);
         List<ServerModel> serverModels = serverRepository.findAll().stream()
-                .filter(server -> 100 - server.getAllocatedSize() >= applicationModel.getSize()
-                        && server.getStoringDbType() == applicationModel.getType() && !server.getApplicationModels().contains(applicationModel)).collect(Collectors.toList());
+                .filter(server -> 100 - server.getAllocatedMemory() - server.getReservedMemory() >= applicationModel.getSize()
+                        && server.getStoringDbType() == applicationModel.getType()
+                        && !server.getApplicationModels().contains(applicationModel)).collect(Collectors.toList());
         if (!serverModels.isEmpty()) {
             for (ServerModel serverModel : serverModels) {
                 if (serverModel.isActive()) {
@@ -54,9 +55,18 @@ public class ResourceManagementService {
                     return DeployResponse.deployed(applicationModel);
                 }
             }
-            DeployApp deployApp = new DeployApp(applicationRepository, applicationModel, serverModels, serverRepository, spinningServers);
-            executor.submit(deployApp);
-            return DeployResponse.scheduled(applicationModel);
+            synchronized (lock) {
+                for (ServerModel serverModel : serverModels) {
+                    applicationModel.setServerId(serverModel.getServerId());
+                    serverModel.setReservedMemory(serverModel.getReservedMemory() + applicationModel.getSize());
+                    applicationRepository.save(applicationModel);
+                    serverRepository.save(serverModel);
+                    DeployApp deployApp = new DeployApp(applicationModel,
+                            serverModel, serverRepository, spinningServers);
+                    executor.submit(deployApp);
+                    return DeployResponse.scheduled(applicationModel);
+                }
+            }
         }
         createServer(applicationModel);
         return DeployResponse.spinning(applicationModel);
@@ -64,7 +74,7 @@ public class ResourceManagementService {
 
     public void createServer(ApplicationModel applicationModel) {
         ServerModel serverModel = new ServerModel();
-        serverModel.setAllocatedSize(applicationModel.getSize());
+        serverModel.setAllocatedMemory(applicationModel.getSize());
         serverModel.setStoringDbType(applicationModel.getType());
         serverRepository.save(serverModel);
         applicationModel.setServerId(serverModel.getServerId());
@@ -72,12 +82,13 @@ public class ResourceManagementService {
         applicationRepository.save(applicationModel);
         DeployServer deployServer = new DeployServer(serverModel, serverRepository);
         spinningServers.put(serverModel.getServerId(), executor.submit(deployServer));
+
     }
 
     public void deployApp(ApplicationModel applicationModel, ServerModel serverModel) {
         applicationModel.setServerId(serverModel.getServerId());
         serverModel.getApplicationModels().add(applicationModel);
-        serverModel.setAllocatedSize(serverModel.getAllocatedSize() + applicationModel.getSize());
+        serverModel.setAllocatedMemory(serverModel.getAllocatedMemory() + applicationModel.getSize());
         applicationRepository.save(applicationModel);
         serverRepository.save(serverModel);
     }
@@ -97,10 +108,11 @@ public class ResourceManagementService {
         else
             serverRepository.deleteById(id);
     }
+
     public void deleteApp(Integer id, String name) {
         ServerModel server = serverRepository.getById(id);
         ApplicationModel application = applicationRepository.getById(new ApplicationId(name, id));
-        server.setAllocatedSize(server.getAllocatedSize() - application.getSize());
+        server.setAllocatedMemory(server.getAllocatedMemory() - application.getSize());
         server.getApplicationModels().remove(application);
         serverRepository.save(server);
     }
