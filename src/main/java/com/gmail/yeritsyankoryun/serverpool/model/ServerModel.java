@@ -22,7 +22,7 @@ public class ServerModel {
     private Db_Type storingDbType;
     @ElementCollection
     @OneToMany(fetch = FetchType.EAGER)
-    private Set<ApplicationModel> applicationModels = new HashSet<>();
+    private final Set<ApplicationModel> applicationModels = new HashSet<>();
     private boolean isActive;
 
 

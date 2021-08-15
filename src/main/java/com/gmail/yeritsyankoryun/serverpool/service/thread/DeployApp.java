@@ -8,15 +8,14 @@ import java.util.concurrent.*;
 
 import static java.lang.Thread.sleep;
 
-public class DeployApp implements Callable<Void> {
+public class DeployApp implements Runnable {
     private final ApplicationModel applicationModel;
     private ServerModel serverModel;
     private final ServerRepository serverRepository;
-    private final ConcurrentHashMap<Integer, Future<ServerModel>> spinningServers;
-    private final ExecutorService executor = Executors.newCachedThreadPool();
+    private final ConcurrentHashMap<Integer, Future<Void>> spinningServers;
 
     public DeployApp(ApplicationModel applicationModel, ServerModel serverModels,
-                     ServerRepository serverRepository, ConcurrentHashMap<Integer, Future<ServerModel>> spinningServers) {
+                     ServerRepository serverRepository, ConcurrentHashMap<Integer, Future<Void>> spinningServers) {
         this.applicationModel = applicationModel;
         this.serverModel = serverModels;
         this.serverRepository = serverRepository;
@@ -24,20 +23,19 @@ public class DeployApp implements Callable<Void> {
     }
 
     @Override
-    public Void call() {
+    public void run() {
         boolean isTrue = true;
         while (isTrue) {
             try {
-                Future<ServerModel> serverModelFuture = spinningServers.get(serverModel.getServerId());
+                Future<Void> serverModelFuture = spinningServers.get(serverModel.getServerId());
                 if (serverModelFuture.isDone()) {
-                    synchronized (serverModelFuture) {
-                        Future<ServerModel> futureServer = executor.submit(() -> addTo(serverModelFuture));
+                    synchronized (spinningServers) {
+                        serverModel = serverRepository.findById(serverModel.getServerId()).get();
+                        serverModel.getApplicationModels().add(applicationModel);
+                        serverModel.setAllocatedMemory(serverModel.getAllocatedMemory() + applicationModel.getSize());
+                        serverModel.setReservedMemory(serverModel.getReservedMemory() - applicationModel.getSize());
+                        serverRepository.save(serverModel);
                         isTrue = false;
-                        if (serverModel.getReservedMemory() == 0)
-                            spinningServers.remove(serverModel.getServerId());
-                        else {
-                            spinningServers.replace(serverModel.getServerId(), serverModelFuture, futureServer);
-                        }
                     }
                 }
                 sleep(100);
@@ -45,16 +43,5 @@ public class DeployApp implements Callable<Void> {
                 e.printStackTrace();
             }
         }
-        return null;
-    }
-
-
-    public ServerModel addTo(Future<ServerModel> future) throws ExecutionException, InterruptedException {
-        serverModel = future.get();
-        serverModel.getApplicationModels().add(applicationModel);
-        serverModel.setAllocatedMemory(serverModel.getAllocatedMemory() + applicationModel.getSize());
-        serverModel.setReservedMemory(serverModel.getReservedMemory() - applicationModel.getSize());
-        serverRepository.save(serverModel);
-        return serverModel;
     }
 }

@@ -7,7 +7,7 @@ import java.util.concurrent.*;
 
 import static java.lang.Thread.sleep;
 
-public class DeployServer implements Callable<ServerModel> {
+public class DeployServer implements Callable<Void> {
     private ServerModel serverModel;
     private final ServerRepository serverRepository;
 
@@ -17,16 +17,15 @@ public class DeployServer implements Callable<ServerModel> {
     }
 
     @Override
-    public ServerModel call() throws Exception {
+    public Void call() throws Exception {
         try {
             sleep(20000);
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
-
         serverModel = serverRepository.findById(serverModel.getServerId()).get();
         serverModel.setActive(true);
         serverRepository.save(serverModel);
-        return serverModel;
+        return null;
     }
 }

@@ -22,7 +22,7 @@ public class ResourceManagementService {
     private final ServerRepository serverRepository;
     private final ApplicationRepository applicationRepository;
     private final ApplicationConverter converter;
-    private final ConcurrentHashMap<Integer, Future<ServerModel>> spinningServers = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<Integer, Future<Void>> spinningServers = new ConcurrentHashMap<>();
     private final ExecutorService executor = Executors.newCachedThreadPool();
     public final static Object lock = new Object();
 
