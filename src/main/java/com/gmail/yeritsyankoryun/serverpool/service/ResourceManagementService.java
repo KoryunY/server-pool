@@ -1,12 +1,14 @@
 package com.gmail.yeritsyankoryun.serverpool.service;
 
 import com.gmail.yeritsyankoryun.serverpool.dto.ApplicationDto;
+import com.gmail.yeritsyankoryun.serverpool.dto.ServerDto;
 import com.gmail.yeritsyankoryun.serverpool.model.ApplicationId;
 import com.gmail.yeritsyankoryun.serverpool.model.ApplicationModel;
 import com.gmail.yeritsyankoryun.serverpool.model.ServerModel;
 import com.gmail.yeritsyankoryun.serverpool.repository.ApplicationRepository;
 import com.gmail.yeritsyankoryun.serverpool.repository.ServerRepository;
 import com.gmail.yeritsyankoryun.serverpool.service.converter.ApplicationConverter;
+import com.gmail.yeritsyankoryun.serverpool.service.converter.ServerConverter;
 import com.gmail.yeritsyankoryun.serverpool.service.response.DeployResponse;
 import com.gmail.yeritsyankoryun.serverpool.service.thread.DeployApp;
 import com.gmail.yeritsyankoryun.serverpool.service.thread.DeployServer;
@@ -19,32 +21,36 @@ import java.util.stream.Collectors;
 
 @Service
 public class ResourceManagementService {
+    private final int MAX_MEMORY=100;
     private final ServerRepository serverRepository;
     private final ApplicationRepository applicationRepository;
-    private final ApplicationConverter converter;
+    private final ApplicationConverter applicationConverter;
+    private final ServerConverter serverConverter;
     private final ConcurrentHashMap<Integer, Future<Void>> spinningServers = new ConcurrentHashMap<>();
     private final ExecutorService executor = Executors.newCachedThreadPool();
     public final static Object lock = new Object();
 
     @Autowired
-    public ResourceManagementService(ServerRepository serverRepository, ApplicationRepository applicationRepository, ApplicationConverter converter) {
+    public ResourceManagementService(ServerRepository serverRepository, ApplicationRepository applicationRepository,
+                                     ApplicationConverter applicationConverter, ServerConverter serverConverter) {
         this.serverRepository = serverRepository;
         this.applicationRepository = applicationRepository;
-        this.converter = converter;
+        this.applicationConverter = applicationConverter;
+        this.serverConverter = serverConverter;
     }
 
-    public List<ServerModel> getAllServers() {
-        return serverRepository.findAll();
+    public List<ServerDto> getAllServers() {
+        return serverRepository.findAll().stream().map(serverConverter::convertToDto).collect(Collectors.toList());
     }
 
-    public List<ApplicationModel> getAllApplications() {
-        return applicationRepository.findAll();
+    public List<ApplicationDto> getAllApplications() {
+        return applicationRepository.findAll().stream().map(applicationConverter::convertToDto).collect(Collectors.toList());
     }
 
     public DeployResponse addApplication(ApplicationDto applicationDto) {
-        ApplicationModel applicationModel = converter.convertToApplication(applicationDto);
+        ApplicationModel applicationModel = applicationConverter.convertToApplication(applicationDto);
         List<ServerModel> serverModels = serverRepository.findAll().stream()
-                .filter(server -> 100 - server.getAllocatedMemory() - server.getReservedMemory() >= applicationModel.getSize()
+                .filter(server -> hasEnoughMemory(server,applicationModel)
                         && server.getStoringDbType() == applicationModel.getType()
                         && !server.getApplicationModels().contains(applicationModel)).collect(Collectors.toList());
         if (!serverModels.isEmpty()) {
@@ -94,12 +100,12 @@ public class ResourceManagementService {
     }
 
 
-    public ServerModel getServerById(int id) {
-        return serverRepository.getById(id);
+    public ServerDto getServerById(int id) {
+        return serverConverter.convertToDto(serverRepository.getById(id));
     }
 
-    public ApplicationModel getApplicationById(int id, String name) {
-        return applicationRepository.getById(new ApplicationId(name, id));
+    public ApplicationDto getApplicationById(int id, String name) {
+        return applicationConverter.convertToDto(applicationRepository.getById(new ApplicationId(name, id)));
     }
 
     public void deleteServer(Integer id) {
@@ -115,5 +121,9 @@ public class ResourceManagementService {
         server.setAllocatedMemory(server.getAllocatedMemory() - application.getSize());
         server.getApplicationModels().remove(application);
         serverRepository.save(server);
+    }
+
+    public boolean hasEnoughMemory(ServerModel serverModel,ApplicationModel applicationModel){
+        return MAX_MEMORY - serverModel.getAllocatedMemory() - serverModel.getReservedMemory() >= applicationModel.getSize();
     }
 }

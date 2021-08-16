@@ -1,6 +1,7 @@
 package com.gmail.yeritsyankoryun.serverpool.controller;
 
 import com.gmail.yeritsyankoryun.serverpool.dto.ApplicationDto;
+import com.gmail.yeritsyankoryun.serverpool.dto.ServerDto;
 import com.gmail.yeritsyankoryun.serverpool.model.ServerModel;
 import com.gmail.yeritsyankoryun.serverpool.service.ResourceManagementService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -20,12 +21,12 @@ public class ServerController {
     }
 
     @GetMapping
-    public List<ServerModel> getServers() {
+    public List<ServerDto> getServers() {
         return service.getAllServers();
     }
 
     @GetMapping(path = "get")
-    public ServerModel getServer(@RequestParam(name = "id") int id) {
+    public ServerDto getServer(@RequestParam(name = "id") int id) {
         return service.getServerById(id);
     }
 

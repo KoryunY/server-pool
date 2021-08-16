@@ -14,4 +14,8 @@ public class ApplicationConverter {
     public ApplicationModel convertToApplication(ApplicationDto applicationDto) {
         return modelMapper.map(applicationDto, ApplicationModel.class);
     }
+
+    public ApplicationDto convertToDto(ApplicationModel applicationModel){
+        return modelMapper.map(applicationModel,ApplicationDto.class);
+    }
 }

@@ -22,12 +22,12 @@ public class ApplicationController {
     }
 
     @GetMapping
-    public List<ApplicationModel> getApplications() {
+    public List<ApplicationDto> getApplications() {
         return service.getAllApplications();
     }
 
     @GetMapping(path = "get")
-    public ApplicationModel getApplication(@RequestParam(name = "id") int id, @RequestParam(name = "name") String name) {
+    public ApplicationDto getApplication(@RequestParam(name = "id") int id, @RequestParam(name = "name") String name) {
         return service.getApplicationById(id, name);
     }
 

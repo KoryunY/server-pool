@@ -1,36 +1,23 @@
-package com.gmail.yeritsyankoryun.serverpool.model;
+package com.gmail.yeritsyankoryun.serverpool.dto;
 
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.transaction.annotation.Transactional;
+import com.gmail.yeritsyankoryun.serverpool.model.Db_Type;
 
-import javax.persistence.*;
-import javax.validation.constraints.Max;
-import javax.validation.constraints.NotNull;
+import java.util.List;
 
-import java.util.HashSet;
-import java.util.Set;
-
-@Entity
-public class ServerModel {
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
+public class ServerDto {
     private int serverId;
-    @Max(100)
     private int allocatedMemory;
     private int reservedMemory;
-    @NotNull
     private Db_Type storingDbType;
-    @ElementCollection
-    @OneToMany(fetch = FetchType.EAGER)
-    private final Set<ApplicationModel> applicationModels = new HashSet<>();
+    private List<ApplicationDto> applicationModels;
     private boolean isActive;
-
-    @Autowired
-    public ServerModel() {
-    }
 
     public int getServerId() {
         return serverId;
+    }
+
+    public void setServerId(int serverId) {
+        this.serverId = serverId;
     }
 
     public int getAllocatedMemory() {
@@ -57,8 +44,12 @@ public class ServerModel {
         this.storingDbType = storingDbType;
     }
 
-    public Set<ApplicationModel> getApplicationModels() {
+    public List<ApplicationDto> getApplicationModels() {
         return applicationModels;
+    }
+
+    public void setApplicationModels(List<ApplicationDto> applicationModels) {
+        this.applicationModels = applicationModels;
     }
 
     public boolean isActive() {
@@ -68,5 +59,4 @@ public class ServerModel {
     public void setActive(boolean active) {
         isActive = active;
     }
-
 }

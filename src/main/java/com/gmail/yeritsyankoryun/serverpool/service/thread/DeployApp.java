@@ -24,24 +24,27 @@ public class DeployApp implements Runnable {
 
     @Override
     public void run() {
-        boolean isTrue = true;
-        while (isTrue) {
+        Future<Void> serverModelFuture = spinningServers.get(serverModel.getServerId());
+        while (!serverModelFuture.isDone()) {
             try {
-                Future<Void> serverModelFuture = spinningServers.get(serverModel.getServerId());
-                if (serverModelFuture.isDone()) {
-                    synchronized (spinningServers) {
-                        serverModel = serverRepository.findById(serverModel.getServerId()).get();
-                        serverModel.getApplicationModels().add(applicationModel);
-                        serverModel.setAllocatedMemory(serverModel.getAllocatedMemory() + applicationModel.getSize());
-                        serverModel.setReservedMemory(serverModel.getReservedMemory() - applicationModel.getSize());
-                        serverRepository.save(serverModel);
-                        isTrue = false;
-                    }
-                }
                 sleep(100);
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
         }
+        try {
+            synchronized (spinningServers) {
+                serverModel = serverRepository.findById(serverModel.getServerId()).get();
+                serverModel.getApplicationModels().add(applicationModel);
+                serverModel.setAllocatedMemory(serverModel.getAllocatedMemory() + applicationModel.getSize());
+                serverModel.setReservedMemory(serverModel.getReservedMemory() - applicationModel.getSize());
+            }
+        } catch (Exception e) {
+            serverModel.setAllocatedMemory(serverModel.getAllocatedMemory() + applicationModel.getSize());
+            e.printStackTrace();
+        } finally {
+            serverRepository.save(serverModel);
+        }
     }
 }
+
