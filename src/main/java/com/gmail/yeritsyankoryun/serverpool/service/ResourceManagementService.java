@@ -123,7 +123,7 @@ public class ResourceManagementService {
         serverRepository.save(server);
     }
 
-    public boolean hasEnoughMemory(ServerModel serverModel,ApplicationModel applicationModel){
+    private boolean hasEnoughMemory(ServerModel serverModel,ApplicationModel applicationModel){
         return MAX_MEMORY - serverModel.getAllocatedMemory() - serverModel.getReservedMemory() >= applicationModel.getSize();
     }
 }
