@@ -21,7 +21,7 @@ import java.util.stream.Collectors;
 
 @Service
 public class ResourceManagementService {
-    private final int MAX_MEMORY=100;
+    private final int MAX_MEMORY = 100;
     private final ServerRepository serverRepository;
     private final ApplicationRepository applicationRepository;
     private final ApplicationConverter applicationConverter;
@@ -50,7 +50,7 @@ public class ResourceManagementService {
     public DeployResponse addApplication(ApplicationDto applicationDto) {
         ApplicationModel applicationModel = applicationConverter.convertToApplication(applicationDto);
         List<ServerModel> serverModels = serverRepository.findAll().stream()
-                .filter(server -> hasEnoughMemory(server,applicationModel)
+                .filter(server -> hasEnoughMemory(server, applicationModel)
                         && server.getStoringDbType() == applicationModel.getType()
                         && !server.getApplicationModels().contains(applicationModel)).collect(Collectors.toList());
         if (!serverModels.isEmpty()) {
@@ -123,7 +123,7 @@ public class ResourceManagementService {
         serverRepository.save(server);
     }
 
-    private boolean hasEnoughMemory(ServerModel serverModel,ApplicationModel applicationModel){
+    private boolean hasEnoughMemory(ServerModel serverModel, ApplicationModel applicationModel) {
         return MAX_MEMORY - serverModel.getAllocatedMemory() - serverModel.getReservedMemory() >= applicationModel.getSize();
     }
 }
