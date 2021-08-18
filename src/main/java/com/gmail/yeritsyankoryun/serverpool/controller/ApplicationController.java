@@ -32,13 +32,13 @@ public class ApplicationController {
     }
 
     @PostMapping(path = "create")
-    public DeployResponse addToServer(@Valid @RequestBody ApplicationDto applicationDto){
+    public DeployResponse addToServer(@Valid @RequestBody ApplicationDto applicationDto) {
         return service.addApplication(applicationDto);
     }
 
     @DeleteMapping(path = "delete")
     public void deleteApplication(@RequestParam(name = "name") String name,
-                          @RequestParam(name = "id") Integer id) {
+                                  @RequestParam(name = "id") Integer id) {
         service.deleteApp(id, name);
     }
 }
