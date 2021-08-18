@@ -22,6 +22,12 @@ public class ApplicationDto {
     public ApplicationDto() {
     }
 
+    public ApplicationDto(@NotNull @Min(1) @Max(100) int size, @NotNull Db_Type type, @NotBlank String name) {
+        this.size = size;
+        this.type = type;
+        this.name = name;
+    }
+
     public int getSize() {
         return size;
     }

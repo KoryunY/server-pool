@@ -29,6 +29,15 @@ public class ServerModel {
     public ServerModel() {
     }
 
+    public ServerModel(int serverId, @Max(100) int allocatedMemory, int reservedMemory,
+                       @NotNull Db_Type storingDbType, boolean isActive) {
+        this.serverId = serverId;
+        this.allocatedMemory = allocatedMemory;
+        this.reservedMemory = reservedMemory;
+        this.storingDbType = storingDbType;
+        this.isActive = isActive;
+    }
+
     public int getServerId() {
         return serverId;
     }

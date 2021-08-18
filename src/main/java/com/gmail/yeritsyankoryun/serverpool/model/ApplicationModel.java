@@ -29,6 +29,13 @@ public class ApplicationModel {
     public ApplicationModel() {
     }
 
+    public ApplicationModel(@NotBlank String name, int serverId, @NotNull @Min(1) @Max(100) int size, @NotNull Db_Type type) {
+        this.name = name;
+        this.serverId = serverId;
+        this.size = size;
+        this.type = type;
+    }
+
     public int getSize() {
         return size;
     }

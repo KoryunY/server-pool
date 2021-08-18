@@ -28,7 +28,7 @@ public class ResourceManagementService {
     private final ServerConverter serverConverter;
     private final ConcurrentHashMap<Integer, Future<Void>> spinningServers = new ConcurrentHashMap<>();
     private final ExecutorService executor = Executors.newCachedThreadPool();
-    public final static Object lock = new Object();
+    private final static Object lock = new Object();
 
     @Autowired
     public ResourceManagementService(ServerRepository serverRepository, ApplicationRepository applicationRepository,
