@@ -33,11 +33,14 @@ class ResourceManagementServiceTest {
     ApplicationConverter applicationConverter = Mockito.mock(ApplicationConverter.class);
     ResourceManagementService service = new ResourceManagementService(serverRepository, applicationRepository,
             applicationConverter, serverConverter);
-    static List<ServerModel> servers = new ArrayList<>();
-    static List<ApplicationModel> applications = new ArrayList<>();
+    static List<ServerModel> servers ;
+    static List<ApplicationModel> applications;
 
     @BeforeAll
     static void fill() {
+        servers = new ArrayList<>();
+        applications = new ArrayList<>();
+
         ApplicationModel app1 = new ApplicationModel("app1", 1, 50, Db_Type.MY_SQL);
         applications.add(app1);
         ApplicationModel app5 = new ApplicationModel("app5", 1, 10, Db_Type.MY_SQL);
@@ -46,7 +49,6 @@ class ResourceManagementServiceTest {
         ServerModel server1 = new ServerModel(1, 60, 0, Db_Type.MY_SQL, true);
         server1.getApplicationModels().add(app1);
         server1.getApplicationModels().add(app5);
-        servers.add(server1);
         servers.add(server1);
 
     }

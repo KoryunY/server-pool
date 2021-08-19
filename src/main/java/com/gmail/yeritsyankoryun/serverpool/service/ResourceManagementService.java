@@ -78,7 +78,7 @@ public class ResourceManagementService {
         return DeployResponse.spinning(applicationModel);
     }
 
-    public void createServer(ApplicationModel applicationModel) {
+    private void createServer(ApplicationModel applicationModel) {
         ServerModel serverModel = new ServerModel();
         serverModel.setAllocatedMemory(applicationModel.getSize());
         serverModel.setStoringDbType(applicationModel.getType());
@@ -91,7 +91,7 @@ public class ResourceManagementService {
 
     }
 
-    public void deployApp(ApplicationModel applicationModel, ServerModel serverModel) {
+    private void deployApp(ApplicationModel applicationModel, ServerModel serverModel) {
         applicationModel.setServerId(serverModel.getServerId());
         serverModel.getApplicationModels().add(applicationModel);
         serverModel.setAllocatedMemory(serverModel.getAllocatedMemory() + applicationModel.getSize());
